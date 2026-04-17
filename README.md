@@ -87,42 +87,62 @@ You can run the server directly for testing:
 
 ## Available Tools
 
-### `list_repos`
+### Repository Management
 
+#### `list_repos`
 Lists all repositories in your Drone instance.
 
-**Example usage:**
-```
-list_repos()
-```
+#### `get_repo`
+Get repository details.
 
-**Response:**
-```
-owner1/repo1
-owner2/repo2
-```
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
 
-### `list_builds`
+#### `enable_repo`
+Enable a repository.
 
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+
+#### `disable_repo`
+Disable a repository.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+
+#### `repair_repo`
+Repair a repository.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+
+#### `chown_repo`
+Change repository ownership.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+
+#### `sync_repos`
+Synchronize repository list.
+
+#### `list_incomplete`
+List repositories with incomplete builds.
+
+### Build Management
+
+#### `list_builds`
 Lists builds for a specific repository.
 
 **Arguments:**
 - `owner` (string): Repository owner
 - `repo` (string): Repository name
 
-**Example usage:**
-```
-list_builds(owner="owner1", repo="repo1")
-```
-
-**Response:**
-```
-#123 success refs/heads/main
-#122 failure refs/heads/feature
-```
-
-### `get_build`
-
+#### `get_build`
 Get detailed information about a specific build.
 
 **Arguments:**
@@ -130,22 +150,297 @@ Get detailed information about a specific build.
 - `repo` (string): Repository name
 - `build` (number): Build number
 
-**Example usage:**
-```
-get_build(owner="owner1", repo="repo1", build=123)
-```
+#### `get_build_last`
+Get the last build for a repository (optionally by branch).
 
-**Response:**
-```
-Build #123
-Status: success
-Ref: refs/heads/main
-Commit: abc123def
-Author: john.doe
-Started: 2023-01-01 12:00:00 +0000 UTC
-Event: push
-Action: sync
-```
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `branch` (string, optional): Branch name
+
+#### `get_build_logs`
+Get logs for a specific build stage and step.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `build` (number): Build number
+- `stage` (number): Stage number
+- `step` (number): Step number
+
+#### `restart_build`
+Restart a build (optionally with parameters).
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `build` (number): Build number
+- `params` (object, optional): Build parameters
+
+#### `cancel_build`
+Cancel a running build.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `build` (number): Build number
+
+#### `promote_build`
+Promote a build to a target environment.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `build` (number): Build number
+- `target` (string): Target environment
+- `params` (object, optional): Promotion parameters
+
+#### `rollback_build`
+Rollback a deployment to a previous build.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `build` (number): Build number
+- `target` (string): Target environment
+- `params` (object, optional): Rollback parameters
+
+#### `approve_build`
+Approve a build stage (for gated deployments).
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `build` (number): Build number
+- `stage` (number): Stage number
+
+#### `decline_build`
+Decline a build stage (for gated deployments).
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `build` (number): Build number
+- `stage` (number): Stage number
+
+#### `create_build`
+Create a new build from a commit or branch.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `commit` (string, optional): Commit SHA
+- `branch` (string, optional): Branch name
+- `params` (object, optional): Build parameters
+
+### Cron Job Management
+
+#### `list_crons`
+List cron jobs for a repository.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+
+#### `get_cron`
+Get cron job details.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `cron` (string): Cron job name
+
+#### `create_cron`
+Create a new cron job.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `name` (string): Cron job name
+- `expr` (string): Cron expression
+- `branch` (string): Branch name
+- `disable` (boolean, optional): Disable the cron job
+
+#### `delete_cron`
+Delete a cron job.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `cron` (string): Cron job name
+
+#### `execute_cron`
+Execute a cron job immediately.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `cron` (string): Cron job name
+
+### Secret Management
+
+#### `list_secrets`
+List repository secrets.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+
+#### `get_secret`
+Get repository secret details.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `name` (string): Secret name
+
+#### `create_secret`
+Create a repository secret.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `name` (string): Secret name
+- `value` (string): Secret value
+- `pull_request` (boolean, optional): Allow in pull requests
+- `pull_request_push` (boolean, optional): Allow in pull request push events
+
+#### `update_secret`
+Update a repository secret.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `name` (string): Secret name
+- `value` (string): Secret value
+- `pull_request` (boolean, optional): Allow in pull requests
+- `pull_request_push` (boolean, optional): Allow in pull request push events
+
+#### `delete_secret`
+Delete a repository secret.
+
+**Arguments:**
+- `owner` (string): Repository owner
+- `repo` (string): Repository name
+- `name` (string): Secret name
+
+#### Organization Secrets
+
+#### `list_org_secrets`
+List organization secrets.
+
+**Arguments:**
+- `namespace` (string): Organization namespace
+
+#### `get_org_secret`
+Get organization secret details.
+
+**Arguments:**
+- `namespace` (string): Organization namespace
+- `name` (string): Secret name
+
+#### `create_org_secret`
+Create an organization secret.
+
+**Arguments:**
+- `namespace` (string): Organization namespace
+- `name` (string): Secret name
+- `value` (string): Secret value
+- `pull_request` (boolean, optional): Allow in pull requests
+- `pull_request_push` (boolean, optional): Allow in pull request push events
+
+#### `update_org_secret`
+Update an organization secret.
+
+**Arguments:**
+- `namespace` (string): Organization namespace
+- `name` (string): Secret name
+- `value` (string): Secret value
+- `pull_request` (boolean, optional): Allow in pull requests
+- `pull_request_push` (boolean, optional): Allow in pull request push events
+
+#### `delete_org_secret`
+Delete an organization secret.
+
+**Arguments:**
+- `namespace` (string): Organization namespace
+- `name` (string): Secret name
+
+### User Management
+
+#### `get_self`
+Get current authenticated user.
+
+#### `list_users`
+List all users.
+
+#### `get_user`
+Get user details.
+
+**Arguments:**
+- `login` (string): User login name
+
+#### `create_user`
+Create a new user.
+
+**Arguments:**
+- `login` (string): User login name
+- `email` (string, optional): User email
+- `admin` (boolean, optional): Admin privileges
+- `active` (boolean, optional): Active status
+- `token` (string, optional): User token
+
+#### `update_user`
+Update a user.
+
+**Arguments:**
+- `login` (string): User login name
+- `admin` (boolean, optional): Admin privileges
+- `active` (boolean, optional): Active status
+
+#### `delete_user`
+Delete a user.
+
+**Arguments:**
+- `login` (string): User login name
+
+### Template Management
+
+#### `list_templates`
+List templates (optionally by namespace).
+
+**Arguments:**
+- `namespace` (string, optional): Template namespace
+
+#### `get_template`
+Get template details and data.
+
+**Arguments:**
+- `namespace` (string): Template namespace
+- `name` (string): Template name
+
+#### `create_template`
+Create a new template.
+
+**Arguments:**
+- `namespace` (string): Template namespace
+- `name` (string): Template name
+- `data` (string): Template data (YAML)
+
+#### `update_template`
+Update a template.
+
+**Arguments:**
+- `namespace` (string): Template namespace
+- `name` (string): Template name
+- `data` (string): Template data (YAML)
+
+#### `delete_template`
+Delete a template.
+
+**Arguments:**
+- `namespace` (string): Template namespace
+- `name` (string): Template name
 
 ## Resources
 
@@ -162,11 +457,17 @@ Read resource: drone://builds/owner1/repo1/123
 
 ```
 .
-├── main.go              # 主程序入口，处理命令行参数和服务器启动
-├── tool/                # 工具处理模块
-│   ├── build.go         # 构建相关工具（list_builds, get_build）
-│   ├── repo.go          # 仓库相关工具（list_repos）
-│   └── resource.go      # 资源处理（drone://builds/...）
+├── main.go              # Main entry point, handles command line arguments and server startup
+├── tool/                # Tool handlers module
+│   ├── build.go         # Build-related tools (list_builds, get_build, restart_build, etc.)
+│   ├── repo.go          # Repository-related tools (list_repos, enable_repo, disable_repo, etc.)
+│   ├── resource.go      # Resource handling (drone://builds/...)
+│   ├── cron.go          # Cron job management tools
+│   ├── secret.go        # Secret management tools
+│   ├── user.go          # User management tools
+│   └── template.go      # Template management tools
+├── test_env.sh          # Test script (uses environment variables)
+├── test_mcp.go          # MCP integration test
 └── README.md
 ```
 

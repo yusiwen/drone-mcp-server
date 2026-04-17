@@ -26,6 +26,10 @@ type DroneServer struct {
 	repoHandler     *tool.RepoHandler
 	buildHandler    *tool.BuildHandler
 	resourceHandler *tool.ResourceHandler
+	cronHandler     *tool.CronHandler
+	secretHandler   *tool.SecretHandler
+	userHandler     *tool.UserHandler
+	templateHandler *tool.TemplateHandler
 }
 
 func main() {
@@ -38,6 +42,10 @@ func main() {
 	droneServer.repoHandler = tool.NewRepoHandler(droneServer.client)
 	droneServer.buildHandler = tool.NewBuildHandler(droneServer.client)
 	droneServer.resourceHandler = tool.NewResourceHandler(droneServer.client)
+	droneServer.cronHandler = tool.NewCronHandler(droneServer.client)
+	droneServer.secretHandler = tool.NewSecretHandler(droneServer.client)
+	droneServer.userHandler = tool.NewUserHandler(droneServer.client)
+	droneServer.templateHandler = tool.NewTemplateHandler(droneServer.client)
 
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "drone-mcp-server",
@@ -51,6 +59,171 @@ func main() {
 	}, droneServer.repoHandler.HandleListRepos)
 
 	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_repo",
+		Description: "Get repository details",
+	}, droneServer.repoHandler.HandleGetRepo)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "enable_repo",
+		Description: "Enable a repository",
+	}, droneServer.repoHandler.HandleEnableRepo)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "disable_repo",
+		Description: "Disable a repository",
+	}, droneServer.repoHandler.HandleDisableRepo)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "repair_repo",
+		Description: "Repair a repository",
+	}, droneServer.repoHandler.HandleRepairRepo)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "chown_repo",
+		Description: "Change repository ownership",
+	}, droneServer.repoHandler.HandleChownRepo)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "sync_repos",
+		Description: "Synchronize repository list",
+	}, droneServer.repoHandler.HandleSyncRepos)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_incomplete",
+		Description: "List repositories with incomplete builds",
+	}, droneServer.repoHandler.HandleListIncomplete)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_crons",
+		Description: "List cron jobs for a repository",
+	}, droneServer.cronHandler.HandleListCrons)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_cron",
+		Description: "Get cron job details",
+	}, droneServer.cronHandler.HandleGetCron)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_cron",
+		Description: "Create a new cron job",
+	}, droneServer.cronHandler.HandleCreateCron)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_cron",
+		Description: "Delete a cron job",
+	}, droneServer.cronHandler.HandleDeleteCron)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "execute_cron",
+		Description: "Execute a cron job immediately",
+	}, droneServer.cronHandler.HandleExecuteCron)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_secrets",
+		Description: "List repository secrets",
+	}, droneServer.secretHandler.HandleListSecrets)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_secret",
+		Description: "Get repository secret details",
+	}, droneServer.secretHandler.HandleGetSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_secret",
+		Description: "Create a repository secret",
+	}, droneServer.secretHandler.HandleCreateSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "update_secret",
+		Description: "Update a repository secret",
+	}, droneServer.secretHandler.HandleUpdateSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_secret",
+		Description: "Delete a repository secret",
+	}, droneServer.secretHandler.HandleDeleteSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_org_secrets",
+		Description: "List organization secrets",
+	}, droneServer.secretHandler.HandleListOrgSecrets)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_org_secret",
+		Description: "Get organization secret details",
+	}, droneServer.secretHandler.HandleGetOrgSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_org_secret",
+		Description: "Create an organization secret",
+	}, droneServer.secretHandler.HandleCreateOrgSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "update_org_secret",
+		Description: "Update an organization secret",
+	}, droneServer.secretHandler.HandleUpdateOrgSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_org_secret",
+		Description: "Delete an organization secret",
+	}, droneServer.secretHandler.HandleDeleteOrgSecret)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_self",
+		Description: "Get current authenticated user",
+	}, droneServer.userHandler.HandleGetSelf)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_users",
+		Description: "List all users",
+	}, droneServer.userHandler.HandleListUsers)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_user",
+		Description: "Get user details",
+	}, droneServer.userHandler.HandleGetUser)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_user",
+		Description: "Create a new user",
+	}, droneServer.userHandler.HandleCreateUser)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "update_user",
+		Description: "Update a user",
+	}, droneServer.userHandler.HandleUpdateUser)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_user",
+		Description: "Delete a user",
+	}, droneServer.userHandler.HandleDeleteUser)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_templates",
+		Description: "List templates (optionally by namespace)",
+	}, droneServer.templateHandler.HandleListTemplates)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_template",
+		Description: "Get template details and data",
+	}, droneServer.templateHandler.HandleGetTemplate)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_template",
+		Description: "Create a new template",
+	}, droneServer.templateHandler.HandleCreateTemplate)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "update_template",
+		Description: "Update a template",
+	}, droneServer.templateHandler.HandleUpdateTemplate)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "delete_template",
+		Description: "Delete a template",
+	}, droneServer.templateHandler.HandleDeleteTemplate)
+
+	mcp.AddTool(server, &mcp.Tool{
 		Name:        "list_builds",
 		Description: "List builds for a repository",
 	}, droneServer.buildHandler.HandleListBuilds)
@@ -59,6 +232,51 @@ func main() {
 		Name:        "get_build",
 		Description: "Get build details",
 	}, droneServer.buildHandler.HandleGetBuild)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_build_last",
+		Description: "Get the last build for a repository (optionally by branch)",
+	}, droneServer.buildHandler.HandleGetBuildLast)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get_build_logs",
+		Description: "Get logs for a specific build stage and step",
+	}, droneServer.buildHandler.HandleBuildLogs)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "restart_build",
+		Description: "Restart a build (optionally with parameters)",
+	}, droneServer.buildHandler.HandleRestartBuild)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "cancel_build",
+		Description: "Cancel a running build",
+	}, droneServer.buildHandler.HandleCancelBuild)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "promote_build",
+		Description: "Promote a build to a target environment",
+	}, droneServer.buildHandler.HandlePromoteBuild)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "rollback_build",
+		Description: "Rollback a deployment to a previous build",
+	}, droneServer.buildHandler.HandleRollbackBuild)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "approve_build",
+		Description: "Approve a build stage (for gated deployments)",
+	}, droneServer.buildHandler.HandleApproveBuild)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "decline_build",
+		Description: "Decline a build stage (for gated deployments)",
+	}, droneServer.buildHandler.HandleDeclineBuild)
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "create_build",
+		Description: "Create a new build from a commit or branch",
+	}, droneServer.buildHandler.HandleCreateBuild)
 
 	// Register resource template
 	server.AddResourceTemplate(&mcp.ResourceTemplate{
