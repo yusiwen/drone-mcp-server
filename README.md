@@ -453,6 +453,71 @@ Access build details via resource URI: `drone://builds/{owner}/{repo}/{build}`
 Read resource: drone://builds/owner1/repo1/123
 ```
 
+## Docker
+
+A multi-architecture Docker image is available on GitHub Container Registry:
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/yusiwen/drone-mcp-server:latest
+
+# Run in stdio mode (for MCP clients)
+docker run -e DRONE_SERVER=https://drone.example.com \
+           -e DRONE_TOKEN=your_token \
+           ghcr.io/yusiwen/drone-mcp-server
+
+# Run in SSE mode with custom port
+docker run -e DRONE_SERVER=https://drone.example.com \
+           -e DRONE_TOKEN=your_token \
+           -p 8080:8080 \
+           ghcr.io/yusiwen/drone-mcp-server --sse --host 0.0.0.0
+
+# Run with SSE authentication
+docker run -e DRONE_SERVER=https://drone.example.com \
+           -e DRONE_TOKEN=your_token \
+           -e MCP_AUTH_TOKEN=your_sse_token \
+           -p 8080:8080 \
+           ghcr.io/yusiwen/drone-mcp-server --sse --host 0.0.0.0
+```
+
+### Docker Compose Example
+
+```yaml
+version: '3.8'
+services:
+  drone-mcp-server:
+    image: ghcr.io/yusiwen/drone-mcp-server:latest
+    environment:
+      DRONE_SERVER: https://drone.example.com
+      DRONE_TOKEN: ${DRONE_TOKEN}
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+    ports:
+      - "8080:8080"
+    command: ["--sse", "--host", "0.0.0.0"]
+    restart: unless-stopped
+```
+
+## Releases
+
+Pre-built binaries are available for Linux (x64, arm64), macOS (x64, arm64), and Windows (x64) in the [GitHub Releases](https://github.com/yusiwen/drone-mcp-server/releases).
+
+### Version Information
+
+The binary includes version information:
+
+```bash
+./drone-mcp-server --version
+```
+
+Output example:
+```
+drone-mcp-server
+Version: v1.0.0
+Commit: abc123
+Build date: 2024-01-01T00:00:00Z
+Go version: go1.25.1
+```
+
 ## Project Structure
 
 ```
