@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"drone-mcp-server/tool"
@@ -87,14 +88,56 @@ func startStdioServer(ctx context.Context, server *mcp.Server) {
 func startSSEServer(ctx context.Context, server *mcp.Server) {
 	addr := fmt.Sprintf("%s:%s", *host, *port)
 
-	handler := mcp.NewSSEHandler(func(request *http.Request) *mcp.Server {
+	// Get SSE authentication token from environment (optional)
+	sseToken := os.Getenv("DRONE_SSE_TOKEN")
+
+	// Create SSE handler
+	sseHandler := mcp.NewSSEHandler(func(request *http.Request) *mcp.Server {
 		// For now, we only have one server instance
 		// Could support multiple endpoints in the future
 		return server
 	}, nil)
 
+	// Wrap with authentication middleware if token is set
+	var handler http.Handler = sseHandler
+	if sseToken != "" {
+		handler = authMiddleware(sseHandler, sseToken)
+		log.Println("SSE authentication enabled (Bearer token required)")
+	} else {
+		log.Println("SSE authentication disabled (no DRONE_SSE_TOKEN set)")
+	}
+
 	log.Printf("Starting MCP server with SSE transport on http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, handler))
+}
+
+// authMiddleware creates an HTTP middleware that validates Bearer token authentication
+func authMiddleware(next http.Handler, expectedToken string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Extract Authorization header
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			return
+		}
+
+		// Check Bearer token format
+		const bearerPrefix = "Bearer "
+		if !strings.HasPrefix(authHeader, bearerPrefix) {
+			http.Error(w, "Invalid authorization format, expected Bearer token", http.StatusUnauthorized)
+			return
+		}
+
+		// Validate token
+		token := strings.TrimPrefix(authHeader, bearerPrefix)
+		if token != expectedToken {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		// Token is valid, proceed to next handler
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *DroneServer) initDroneClient() {

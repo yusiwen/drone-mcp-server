@@ -23,9 +23,13 @@ Set the following environment variables:
 ```bash
 export DRONE_SERVER=https://drone.example.com
 export DRONE_TOKEN=your_drone_token
+# Optional: For SSE transport authentication
+export DRONE_SSE_TOKEN=your_sse_auth_token
 ```
 
 The `DRONE_TOKEN` should be a personal access token with appropriate permissions to read repositories and builds.
+
+**SSE Authentication**: When using SSE transport, you can optionally set `DRONE_SSE_TOKEN` to require Bearer token authentication. Clients must include `Authorization: Bearer <token>` header in their requests. If not set, SSE endpoints will be publicly accessible (use with caution in production).
 
 ## Usage
 
@@ -66,10 +70,20 @@ You can run the server directly for testing:
 2. **SSE HTTP mode**: Uses Server-Sent Events (SSE) over HTTP. Suitable for remote access or testing.
 
    ```bash
+   # Without authentication (public access)
+   ./drone-mcp-server --sse --host 0.0.0.0 --port 8080
+   
+   # With authentication (recommended for production)
+   export DRONE_SSE_TOKEN=your-secret-token
    ./drone-mcp-server --sse --host 0.0.0.0 --port 8080
    ```
    
    The server will be available at `http://localhost:8080/` for SSE connections.
+   
+   **Authentication**: If `DRONE_SSE_TOKEN` is set, clients must include the header:
+   ```
+   Authorization: Bearer your-secret-token
+   ```
 
 ## Available Tools
 
