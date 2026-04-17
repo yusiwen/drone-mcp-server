@@ -1,0 +1,111 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0, v0.1.0, etc.
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run tests
+        run: |
+          # Add your test commands here when tests are available
+          echo "Tests would run here"
+
+      - name: Build binaries
+        run: |
+          # Create output directory
+          mkdir -p dist
+
+          # Get version from tag
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          
+          # Get git commit
+          COMMIT=$(git rev-parse --short HEAD)
+          
+          # Get build date
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+          # Build for multiple platforms
+          PLATFORMS="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64"
+          
+          for PLATFORM in $PLATFORMS; do
+            OS=$(echo $PLATFORM | cut -d'/' -f1)
+            ARCH=$(echo $PLATFORM | cut -d'/' -f2)
+            OUTPUT_NAME="drone-mcp-server"
+            
+            if [ "$OS" = "windows" ]; then
+              OUTPUT_NAME="$OUTPUT_NAME.exe"
+            fi
+            
+            echo "Building for $OS/$ARCH..."
+            GOOS=$OS GOARCH=$ARCH CGO_ENABLED=0 go build \
+              -ldflags="-s -w \
+                -X main.buildVersion=$VERSION \
+                -X main.buildCommit=$COMMIT \
+                -X main.buildDate=$BUILD_DATE" \
+              -o "dist/drone-mcp-server_${VERSION}_${OS}_${ARCH}/$OUTPUT_NAME" .
+            
+            # Create archive
+            if [ "$OS" = "windows" ]; then
+              cd "dist/drone-mcp-server_${VERSION}_${OS}_${ARCH}" && \
+              zip -r "../drone-mcp-server_${VERSION}_${OS}_${ARCH}.zip" . && \
+              cd ../..
+            else
+              cd "dist/drone-mcp-server_${VERSION}_${OS}_${ARCH}" && \
+              tar czf "../drone-mcp-server_${VERSION}_${OS}_${ARCH}.tar.gz" . && \
+              cd ../..
+            fi
+          done
+          
+          # List generated files
+          ls -la dist/*.tar.gz dist/*.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ env.VERSION }}
+          body: |
+            # Drone MCP Server ${{ env.VERSION }}
+            
+            ## Features
+            - MCP server for Drone CI/CD
+            - Supports stdio and SSE transport modes
+            - 47 tools for managing repositories, builds, cron jobs, secrets, users, and templates
+            
+            ## Download
+            Pre-built binaries available for:
+            - Linux (x64, arm64)
+            - macOS (x64, arm64)  
+            - Windows (x64)
+            
+            ## Usage
+            See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed usage instructions.
+            
+            ## Changelog
+            See [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }})
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

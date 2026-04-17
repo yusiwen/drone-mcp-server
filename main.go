@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -16,10 +17,18 @@ import (
 )
 
 var (
-	useSSE = flag.Bool("sse", false, "Use SSE HTTP transport instead of stdio")
-	host   = flag.String("host", "localhost", "Host to listen on (SSE mode only)")
-	port   = flag.String("port", "8080", "Port to listen on (SSE mode only)")
-	path   = flag.String("path", "/", "Path for SSE endpoint (SSE mode only)")
+	useSSE  = flag.Bool("sse", false, "Use SSE HTTP transport instead of stdio")
+	host    = flag.String("host", "localhost", "Host to listen on (SSE mode only)")
+	port    = flag.String("port", "8080", "Port to listen on (SSE mode only)")
+	path    = flag.String("path", "/", "Path for SSE endpoint (SSE mode only)")
+	version = flag.Bool("version", false, "Show version information")
+)
+
+// Build-time variables (set via -ldflags)
+var (
+	buildVersion = "dev"
+	buildCommit  = "unknown"
+	buildDate    = "unknown"
 )
 
 type DroneServer struct {
@@ -35,6 +44,16 @@ type DroneServer struct {
 
 func main() {
 	flag.Parse()
+
+	// Show version information if requested
+	if *version {
+		fmt.Printf("drone-mcp-server\n")
+		fmt.Printf("Version: %s\n", buildVersion)
+		fmt.Printf("Commit: %s\n", buildCommit)
+		fmt.Printf("Build date: %s\n", buildDate)
+		fmt.Printf("Go version: %s\n", runtime.Version())
+		os.Exit(0)
+	}
 
 	droneServer := &DroneServer{}
 	droneServer.initDroneClient()
