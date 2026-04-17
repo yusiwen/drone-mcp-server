@@ -89,7 +89,7 @@ func startSSEServer(ctx context.Context, server *mcp.Server) {
 	addr := fmt.Sprintf("%s:%s", *host, *port)
 
 	// Get SSE authentication token from environment (optional)
-	sseToken := os.Getenv("DRONE_SSE_TOKEN")
+	sseToken := os.Getenv("MCP_AUTH_TOKEN")
 
 	// Create SSE handler
 	sseHandler := mcp.NewSSEHandler(func(request *http.Request) *mcp.Server {
@@ -104,7 +104,7 @@ func startSSEServer(ctx context.Context, server *mcp.Server) {
 		handler = authMiddleware(sseHandler, sseToken)
 		log.Println("SSE authentication enabled (Bearer token required)")
 	} else {
-		log.Println("SSE authentication disabled (no DRONE_SSE_TOKEN set)")
+		log.Println("SSE authentication disabled (no MCP_AUTH_TOKEN set)")
 	}
 
 	log.Printf("Starting MCP server with SSE transport on http://%s", addr)
