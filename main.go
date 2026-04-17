@@ -19,6 +19,7 @@ var (
 	useSSE = flag.Bool("sse", false, "Use SSE HTTP transport instead of stdio")
 	host   = flag.String("host", "localhost", "Host to listen on (SSE mode only)")
 	port   = flag.String("port", "8080", "Port to listen on (SSE mode only)")
+	path   = flag.String("path", "/", "Path for SSE endpoint (SSE mode only)")
 )
 
 type DroneServer struct {
@@ -325,8 +326,18 @@ func startSSEServer(ctx context.Context, server *mcp.Server) {
 		log.Println("SSE authentication disabled (no MCP_AUTH_TOKEN set)")
 	}
 
-	log.Printf("Starting MCP server with SSE transport on http://%s", addr)
-	log.Fatal(http.ListenAndServe(addr, handler))
+	// Ensure path starts with "/"
+	ssePath := *path
+	if !strings.HasPrefix(ssePath, "/") {
+		ssePath = "/" + ssePath
+	}
+
+	// Create HTTP mux and register handler on the specified path
+	mux := http.NewServeMux()
+	mux.Handle(ssePath, handler)
+
+	log.Printf("Starting MCP server with SSE transport on http://%s%s", addr, ssePath)
+	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
 // authMiddleware creates an HTTP middleware that validates Bearer token authentication
