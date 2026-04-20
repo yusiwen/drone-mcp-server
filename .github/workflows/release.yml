@@ -53,12 +53,45 @@ jobs:
             - 47 tools for managing repositories, builds, cron jobs, secrets, users, and templates
             
             ## Download
-            Pre-built binaries available for:
+            ### Pre-built Binaries
+            Available for:
             - Linux (x64, arm64)
             - macOS (x64, arm64)  
             - Windows (x64)
             
-            ## Usage
+            ### Docker Image
+            Multi-architecture Docker image available on GitHub Container Registry:
+            ```
+            docker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+            ```
+            
+            Supported platforms: `linux/amd64`, `linux/arm64`
+            
+            ## Quick Start
+            ### Binary
+            ```bash
+            # Set environment variables
+            export DRONE_SERVER=https://drone.example.com
+            export DRONE_TOKEN=your_token
+            
+            # Run in stdio mode (for MCP clients)
+            ./drone-mcp-server
+            
+            # Run in SSE mode
+            ./drone-mcp-server --sse --host localhost --port 8080
+            ```
+            
+            ### Docker
+            ```bash
+            # Run with Docker
+            docker run -e DRONE_SERVER=https://drone.example.com \
+                       -e DRONE_TOKEN=your_token \
+                       -p 8080:8080 \
+                       ghcr.io/${{ github.repository }}:${{ env.VERSION }} \
+                       --sse --host 0.0.0.0
+            ```
+            
+            ## Documentation
             See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed usage instructions.
             
             ## Changelog

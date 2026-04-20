@@ -55,10 +55,12 @@ jobs:
       - name: Get version info
         id: version
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/v}
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # For tags, use the full tag name (including 'v' prefix if present)
+            VERSION=${GITHUB_REF#refs/tags/}
             echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           else
+            # For non-tag builds, use dev-<commit>
             COMMIT=$(git rev-parse --short HEAD)
             echo "VERSION=dev-$COMMIT" >> $GITHUB_OUTPUT
           fi
