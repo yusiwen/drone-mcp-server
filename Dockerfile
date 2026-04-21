@@ -61,10 +61,6 @@ ENV DRONE_SERVER=""
 ENV DRONE_TOKEN=""
 ENV MCP_AUTH_TOKEN=""
 
-# Health check (adjust based on your application)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
-
 # Entrypoint
 ENTRYPOINT ["./drone-mcp-server"]
 
