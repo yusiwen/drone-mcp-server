@@ -2,6 +2,8 @@
 drone-mcp-server
 *.exe
 *.out
+dist/
+releases/
 
 # Dependencies
 vendor/
