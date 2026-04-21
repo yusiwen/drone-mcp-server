@@ -49,58 +49,58 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG"^ 2>/dev/null || echo "")
           
           # Create release body with changelog
-          cat > release_body.md <<-EOF
-            # Drone MCP Server $CURRENT_TAG
-            
-            ## Features
-            - MCP server for Drone CI/CD
-            - Supports stdio and SSE transport modes
-            - 47 tools for managing repositories, builds, cron jobs, secrets, users, and templates
-            
-            ## Download
-            ### Pre-built Binaries
-            Available for:
-            - Linux (x64, arm64)
-            - macOS (x64, arm64)  
-            - Windows (x64)
-            
-            ### Docker Image
-            Multi-architecture Docker image available on GitHub Container Registry:
-            \`\`\`
-            docker pull ghcr.io/$GITHUB_REPOSITORY:$CURRENT_TAG
-            \`\`\`
-            
-            Supported platforms: \`linux/amd64\`, \`linux/arm64\`
-            
-            ## Quick Start
-            ### Binary
-            \`\`\`bash
-            # Set environment variables
-            export DRONE_SERVER=https://drone.example.com
-            export DRONE_TOKEN=your_token
-            
-            # Run in stdio mode (for MCP clients)
-            ./drone-mcp-server
-            
-            # Run in SSE mode
-            ./drone-mcp-server --sse --host localhost --port 8080
-            \`\`\`
-            
-            ### Docker
-            \`\`\`bash
-            # Run with Docker
-            docker run -e DRONE_SERVER=https://drone.example.com \\
-                       -e DRONE_TOKEN=your_token \\
-                       -p 8080:8080 \\
-                       ghcr.io/$GITHUB_REPOSITORY:$CURRENT_TAG \\
-                       --sse --host 0.0.0.0
-            \`\`\`
-            
-            ## Changelog
-            EOF
+          cat > release_body.md <<'EOF'
+# Drone MCP Server $CURRENT_TAG
+
+## Features
+- MCP server for Drone CI/CD
+- Supports stdio and SSE transport modes
+- 47 tools for managing repositories, builds, cron jobs, secrets, users, and templates
+
+## Download
+### Pre-built Binaries
+Available for:
+- Linux (x64, arm64)
+- macOS (x64, arm64)  
+- Windows (x64)
+
+### Docker Image
+Multi-architecture Docker image available on GitHub Container Registry:
+```
+docker pull ghcr.io/$GITHUB_REPOSITORY:$CURRENT_TAG
+```
+
+Supported platforms: `linux/amd64`, `linux/arm64`
+
+## Quick Start
+### Binary
+```bash
+# Set environment variables
+export DRONE_SERVER=https://drone.example.com
+export DRONE_TOKEN=your_token
+
+# Run in stdio mode (for MCP clients)
+./drone-mcp-server
+
+# Run in SSE mode
+./drone-mcp-server --sse --host localhost --port 8080
+```
+
+### Docker
+```bash
+# Run with Docker
+docker run -e DRONE_SERVER=https://drone.example.com \\
+           -e DRONE_TOKEN=your_token \\
+           -p 8080:8080 \\
+           ghcr.io/$GITHUB_REPOSITORY:$CURRENT_TAG \\
+           --sse --host 0.0.0.0
+```
+
+## Changelog
+
+EOF
           
-          # Remove leading whitespace from each line
-          sed -i 's/^[[:space:]]*//' release_body.md
+
           
           if [ -n "$PREVIOUS_TAG" ]; then
             echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
