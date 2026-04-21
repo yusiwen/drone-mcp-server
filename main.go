@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -71,6 +74,52 @@ func main() {
 		Name:    "drone-mcp-server",
 		Version: "0.1.0",
 	}, nil)
+
+	// Add logging middleware for MCP method calls
+	server.AddReceivingMiddleware(func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			// Log the method call
+			start := time.Now()
+
+			// For tools/call method, log tool name
+			if method == "tools/call" {
+				if callReq, ok := req.(*mcp.CallToolRequest); ok {
+					log.Printf("[TOOL] Tool called: %s", callReq.Params.Name)
+				}
+			} else {
+				log.Printf("[MCP] Method called: %s", method)
+			}
+
+			// Call the next handler
+			result, err := next(ctx, method, req)
+
+			// Log completion
+			duration := time.Since(start)
+			if err != nil {
+				if method == "tools/call" {
+					if callReq, ok := req.(*mcp.CallToolRequest); ok {
+						log.Printf("[TOOL] Tool %s failed: %v (took %v)", callReq.Params.Name, err, duration)
+					} else {
+						log.Printf("[MCP] Method %s failed: %v (took %v)", method, err, duration)
+					}
+				} else {
+					log.Printf("[MCP] Method %s failed: %v (took %v)", method, err, duration)
+				}
+			} else {
+				if method == "tools/call" {
+					if callReq, ok := req.(*mcp.CallToolRequest); ok {
+						log.Printf("[TOOL] Tool %s completed successfully (took %v)", callReq.Params.Name, duration)
+					} else {
+						log.Printf("[MCP] Method %s completed (took %v)", method, duration)
+					}
+				} else {
+					log.Printf("[MCP] Method %s completed (took %v)", method, duration)
+				}
+			}
+
+			return result, err
+		}
+	})
 
 	// Register tools
 	mcp.AddTool(server, &mcp.Tool{
@@ -345,6 +394,9 @@ func startSSEServer(ctx context.Context, server *mcp.Server) {
 		log.Println("SSE authentication disabled (no MCP_AUTH_TOKEN set)")
 	}
 
+	// Wrap with logging middleware for access logging
+	handler = loggingMiddleware(handler)
+
 	// Ensure path starts with "/"
 	ssePath := *path
 	if !strings.HasPrefix(ssePath, "/") {
@@ -362,9 +414,13 @@ func startSSEServer(ctx context.Context, server *mcp.Server) {
 // authMiddleware creates an HTTP middleware that validates Bearer token authentication
 func authMiddleware(next http.Handler, expectedToken string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Extract client IP for logging
+		clientIP := getClientIP(r)
+
 		// Extract Authorization header
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
+			log.Printf("[AUTH] Token missing from %s %s (client: %s)", r.Method, r.URL.Path, clientIP)
 			http.Error(w, "Authorization header required", http.StatusUnauthorized)
 			return
 		}
@@ -372,6 +428,7 @@ func authMiddleware(next http.Handler, expectedToken string) http.Handler {
 		// Check Bearer token format
 		const bearerPrefix = "Bearer "
 		if !strings.HasPrefix(authHeader, bearerPrefix) {
+			log.Printf("[AUTH] Invalid token format from %s %s (client: %s)", r.Method, r.URL.Path, clientIP)
 			http.Error(w, "Invalid authorization format, expected Bearer token", http.StatusUnauthorized)
 			return
 		}
@@ -379,13 +436,122 @@ func authMiddleware(next http.Handler, expectedToken string) http.Handler {
 		// Validate token
 		token := strings.TrimPrefix(authHeader, bearerPrefix)
 		if token != expectedToken {
+			log.Printf("[AUTH] Invalid token from %s %s (client: %s)", r.Method, r.URL.Path, clientIP)
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
 
+		log.Printf("[AUTH] Token validated for %s %s (client: %s)", r.Method, r.URL.Path, clientIP)
 		// Token is valid, proceed to next handler
 		next.ServeHTTP(w, r)
 	})
+}
+
+// loggingMiddleware creates an HTTP middleware that logs access information
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		clientIP := getClientIP(r)
+		userAgent := r.Header.Get("User-Agent")
+		if userAgent == "" {
+			userAgent = "-"
+		}
+
+		// Create a response writer wrapper to capture status code
+		rw := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+		// Process request
+		next.ServeHTTP(rw, r)
+
+		duration := time.Since(start)
+
+		// Log the access
+		log.Printf("[ACCESS] %s %s %s %d %s %s %s",
+			clientIP,
+			r.Method,
+			r.URL.Path,
+			rw.statusCode,
+			r.Header.Get("Content-Type"),
+			userAgent,
+			duration,
+		)
+	})
+}
+
+// responseWriter wraps http.ResponseWriter to capture status code and support streaming interfaces
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	hijacked   bool
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	if !rw.hijacked {
+		rw.statusCode = code
+		rw.ResponseWriter.WriteHeader(code)
+	}
+}
+
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	if rw.hijacked {
+		return 0, http.ErrHijacked
+	}
+	if rw.statusCode == 0 {
+		rw.statusCode = http.StatusOK
+	}
+	return rw.ResponseWriter.Write(b)
+}
+
+// Flush implements http.Flusher for SSE streaming support
+func (rw *responseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// Hijack implements http.Hijacker for connection upgrades
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := rw.ResponseWriter.(http.Hijacker); ok {
+		rw.hijacked = true
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("hijacking not supported")
+}
+
+// Push implements http.Pusher for HTTP/2 server push
+func (rw *responseWriter) Push(target string, opts *http.PushOptions) error {
+	if p, ok := rw.ResponseWriter.(http.Pusher); ok {
+		return p.Push(target, opts)
+	}
+	return http.ErrNotSupported
+}
+
+// ReadFrom implements io.ReaderFrom for efficient copying
+func (rw *responseWriter) ReadFrom(r io.Reader) (n int64, err error) {
+	if rf, ok := rw.ResponseWriter.(io.ReaderFrom); ok {
+		return rf.ReadFrom(r)
+	}
+	return io.Copy(rw.ResponseWriter, r)
+}
+
+// getClientIP extracts the client IP address from the request
+func getClientIP(r *http.Request) string {
+	// Check X-Forwarded-For header (for proxies)
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		// Take the first IP in the list
+		if commaIndex := strings.Index(forwarded, ","); commaIndex != -1 {
+			return strings.TrimSpace(forwarded[:commaIndex])
+		}
+		return forwarded
+	}
+
+	// Check X-Real-IP header
+	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+		return realIP
+	}
+
+	// Fall back to remote address
+	return strings.Split(r.RemoteAddr, ":")[0]
 }
 
 func (s *DroneServer) initDroneClient() {

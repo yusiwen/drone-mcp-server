@@ -124,4 +124,5 @@ make release          # Builds binaries for all platforms, creates archives in r
 - SSE authentication middleware is custom (not provided by MCP SDK)
 - Version info injected via ldflags in Makefile
 - All 47 tools are implemented and functional
+- Tool calls are automatically logged via MCP middleware (receiving middleware)
 - Project structure is stable - follow existing patterns
