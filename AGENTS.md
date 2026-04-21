@@ -80,6 +80,31 @@ curl -H "Authorization: Bearer $MCP_AUTH_TOKEN" http://localhost:8080/  # SSE en
 - **Platform support** - Build for 5 platforms: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64
 - **Docker multi-arch** - Supports linux/amd64 and linux/arm64
 
+## Development Tools & Package Managers
+
+When running CLI tools during OpenCode sessions, use the following package managers to ensure isolation and version consistency:
+
+### Python Tools
+- Use `uvx` (uv tool runner) for Python-based tools
+- Example: `uvx black --check .` (format checking)
+- Example: `uvx ruff check .` (linting)  
+- Example: `uvx pytest tests/` (running tests)
+
+### Node.js Tools
+- Use `npx` (npm package runner) for Node.js-based tools
+- Example: `npx prettier --check .` (code formatting)
+- Example: `npx eslint .` (linting)
+- Example: `npx jest` (testing)
+
+### Go Tools
+- Use `go run` for single-file execution: `go run ./cmd/tool.go`
+- Use `go install` for installing binaries: `go install github.com/xxx/tool@latest`
+
+### Rationale
+- Avoids global package installation conflicts
+- Ensures consistent tool versions across sessions
+- Follows modern development best practices
+
 ## Release Process
 ```bash
 make release          # Builds binaries for all platforms, creates archives in releases/
