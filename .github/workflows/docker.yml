@@ -86,12 +86,12 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ steps.meta.outputs.tags }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Vulnerability scan
         if: github.event_name != 'pull_request'
         uses: anchore/scan-action@v3
         with:
-          image: ${{ steps.meta.outputs.tags }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           fail-build: false
           severity-cutoff: critical
