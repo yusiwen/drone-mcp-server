@@ -39,66 +39,92 @@ jobs:
           
           # List generated files
           ls -la releases/
+          
+      - name: Generate changelog
+        run: |
+          # Get current version tag
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          
+          # Get previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG"^ 2>/dev/null || echo "")
+          
+          # Create release body with changelog
+          cat > release_body.md << EOF
+# Drone MCP Server $CURRENT_TAG
+
+## Features
+- MCP server for Drone CI/CD
+- Supports stdio and SSE transport modes
+- 47 tools for managing repositories, builds, cron jobs, secrets, users, and templates
+
+## Download
+### Pre-built Binaries
+Available for:
+- Linux (x64, arm64)
+- macOS (x64, arm64)  
+- Windows (x64)
+
+### Docker Image
+Multi-architecture Docker image available on GitHub Container Registry:
+\`\`\`
+docker pull ghcr.io/$GITHUB_REPOSITORY:$CURRENT_TAG
+\`\`\`
+
+Supported platforms: \`linux/amd64\`, \`linux/arm64\`
+
+## Quick Start
+### Binary
+\`\`\`bash
+# Set environment variables
+export DRONE_SERVER=https://drone.example.com
+export DRONE_TOKEN=your_token
+
+# Run in stdio mode (for MCP clients)
+./drone-mcp-server
+
+# Run in SSE mode
+./drone-mcp-server --sse --host localhost --port 8080
+\`\`\`
+
+### Docker
+\`\`\`bash
+# Run with Docker
+docker run -e DRONE_SERVER=https://drone.example.com \\
+           -e DRONE_TOKEN=your_token \\
+           -p 8080:8080 \\
+           ghcr.io/$GITHUB_REPOSITORY:$CURRENT_TAG \\
+           --sse --host 0.0.0.0
+\`\`\`
+
+## Changelog
+EOF
+          
+          if [ -n "$PREVIOUS_TAG" ]; then
+            echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --no-merges "$PREVIOUS_TAG".."$CURRENT_TAG" 2>/dev/null || echo "No commits found")
+          else
+            echo "No previous tag found, generating full changelog"
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" --no-merges 2>/dev/null || echo "No commits found")
+          fi
+          
+          # Append changelog to release body
+          echo "" >> release_body.md
+          echo "$CHANGELOG" >> release_body.md
+          
+          # Also create a simple changelog file for reference
+          echo "# Changelog $CURRENT_TAG" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "$CHANGELOG" >> CHANGELOG.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           name: Release ${{ env.VERSION }}
-          body: |
-            # Drone MCP Server ${{ env.VERSION }}
-            
-            ## Features
-            - MCP server for Drone CI/CD
-            - Supports stdio and SSE transport modes
-            - 47 tools for managing repositories, builds, cron jobs, secrets, users, and templates
-            
-            ## Download
-            ### Pre-built Binaries
-            Available for:
-            - Linux (x64, arm64)
-            - macOS (x64, arm64)  
-            - Windows (x64)
-            
-            ### Docker Image
-            Multi-architecture Docker image available on GitHub Container Registry:
-            ```
-            docker pull ghcr.io/${{ github.repository }}:${{ env.VERSION }}
-            ```
-            
-            Supported platforms: `linux/amd64`, `linux/arm64`
-            
-            ## Quick Start
-            ### Binary
-            ```bash
-            # Set environment variables
-            export DRONE_SERVER=https://drone.example.com
-            export DRONE_TOKEN=your_token
-            
-            # Run in stdio mode (for MCP clients)
-            ./drone-mcp-server
-            
-            # Run in SSE mode
-            ./drone-mcp-server --sse --host localhost --port 8080
-            ```
-            
-            ### Docker
-            ```bash
-            # Run with Docker
-            docker run -e DRONE_SERVER=https://drone.example.com \
-                       -e DRONE_TOKEN=your_token \
-                       -p 8080:8080 \
-                       ghcr.io/${{ github.repository }}:${{ env.VERSION }} \
-                       --sse --host 0.0.0.0
-            ```
-            
-            ## Documentation
-            See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for detailed usage instructions.
-            
-            ## Changelog
-            See [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref }})
+          body_path: release_body.md
           files: |
             releases/*.tar.gz
             releases/*.zip
+            CHANGELOG.md
           draft: false
           prerelease: false
         env:
