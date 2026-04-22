@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.yusiwen/drone-mcp-server",
+  "title": "Drone CI/CD MCP Server",
+  "description": "MCP server for Drone CI/CD with 47 tools for build, repo, secret, user, template and cron management",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/yusiwen/drone-mcp-server",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/yusiwen/drone-mcp-server:1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

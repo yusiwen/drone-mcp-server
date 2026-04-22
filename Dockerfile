@@ -35,6 +35,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 # Final stage
 FROM alpine:latest
 
+LABEL io.modelcontextprotocol.server.name="io.github.yusiwen/drone-mcp-server"
+
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata
 
