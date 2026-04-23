@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'  # Trigger on version tags like v1.0.0, v0.1.0, etc.
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -19,7 +20,7 @@ jobs:
       
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
