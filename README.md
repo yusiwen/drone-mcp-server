@@ -628,7 +628,7 @@ Go version: go1.25.1
 
 ### Dependencies
 
-- Go 1.25+ (the MCP Go SDK requires it)
+- Go 1.25.14+ (the toolchain is pinned by `go.mod`; earlier Go 1.25 patch releases carry standard library vulnerabilities that fail the `govulncheck` gate)
 - [github.com/modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk) - MCP SDK (Streamable HTTP transport)
 - [github.com/drone/drone-go](https://github.com/drone/drone-go) - Drone API client
 
@@ -645,6 +645,7 @@ go build -o drone-mcp-server .
 make test                                  # unit tests
 make test-race                             # with the race detector
 make smoke                                 # end-to-end security smoke test
+make vuln                                  # govulncheck (module + standard library)
 go vet ./...
 ```
 

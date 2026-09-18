@@ -1,6 +1,8 @@
 # Multi-stage Docker build for drone-mcp-server
 # Build stage
-FROM golang:1.25.1-alpine AS builder
+# The patch level matters: govulncheck gates the release and earlier Go 1.25
+# patch releases carry standard library vulnerabilities.
+FROM golang:1.25.14-alpine AS builder
 
 # Build arguments
 ARG BUILD_VERSION=dev

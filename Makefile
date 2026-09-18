@@ -137,6 +137,7 @@ help:
 	@echo "  test         - Run tests"
 	@echo "  test-race    - Run tests with the race detector"
 	@echo "  smoke        - Run the end-to-end security smoke test"
+	@echo "  vuln         - Scan for known vulnerabilities with govulncheck"
 	@echo "  test-coverage - Run tests with coverage report"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  version      - Show version information"
@@ -191,6 +192,17 @@ lint:
 	else \
 		echo "golangci-lint not found. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
 	fi
+
+# Scan the module and the Go standard library for known vulnerabilities
+.PHONY: vuln
+vuln:
+	@echo "Running govulncheck..."
+	@command -v govulncheck >/dev/null 2>&1 || { \
+		echo "govulncheck not found. Install the version CI pins with:"; \
+		echo "  go install golang.org/x/vuln/cmd/govulncheck@v1.7.0"; \
+		exit 1; \
+	}
+	govulncheck ./...
 
 # Check code quality
 .PHONY: check

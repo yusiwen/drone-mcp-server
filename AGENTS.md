@@ -8,7 +8,7 @@ MCP server for Drone CI/CD that provides tools to query build information, repos
 - `main_test.go` - Tests for the auth middleware, allowlists, log hygiene and tool registration
 - `tool/` - All tool handlers (build.go, repo.go, secret.go, user.go, template.go, cron.go, resource.go)
 - `tool/validate.go`, `tool/validate_args.go` - Input validation helpers and the per-tool `Validate()` implementations
-- `go.mod` - Dependencies: drone-go v1.7.1, go-sdk v1.8.0 (requires Go 1.25+)
+- `go.mod` - Dependencies: drone-go v1.7.1, go-sdk v1.8.0 (requires Go 1.25.14+)
 - `SECURITY.md` - Threat model, deployment guidance and vulnerability reporting process
 - `Makefile` - Build system with targets: build, test, test-race, release, docker-build
 - `README.md` - User documentation
@@ -98,7 +98,7 @@ curl -i -X POST -H 'Content-Type: application/json' \
 - **Error handling** - Return MCP tool errors with descriptive messages; never include secrets in errors or logs
 - **Logging** - Tool arguments are never logged; sanitize any request-derived value with `sanitizeLog` before logging it
 - **MCP SDK patterns** - Follow examples in `github.com/modelcontextprotocol/go-sdk`
-- **Go version** - 1.25+ (see go.mod; required by go-sdk v1.8.0)
+- **Go version** - 1.25.14+ (see go.mod; required by go-sdk v1.8.0, and earlier 1.25 patches fail the govulncheck gate)
 - **Platform support** - Build for 5 platforms: linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64
 - **Docker multi-arch** - Supports linux/amd64 and linux/arm64
 

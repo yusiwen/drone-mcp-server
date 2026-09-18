@@ -1,6 +1,6 @@
 module drone-mcp-server
 
-go 1.25.1
+go 1.25.14
 
 require (
 	github.com/drone/drone-go v1.7.1
