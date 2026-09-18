@@ -1,0 +1,24 @@
+# Build context exclusions for the Docker image.
+# Keep go.mod, go.sum and the Go sources (main.go, tool/, test_mcp.go) included.
+
+# Version control / CI metadata
+.git
+.gitignore
+.github
+
+# Build output
+dist/
+releases/
+drone-mcp-server
+*.exe
+
+# Local artifacts and secrets
+*.log
+.env
+.env.*
+coverage.out
+coverage.html
+test_env.sh
+*.tar.gz
+*.zip
+.DS_Store

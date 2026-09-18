@@ -6,15 +6,27 @@ on:
     types:
       - completed
 
+# Least privilege by default. The publish job elevates only for OIDC.
+permissions:
+  contents: read
+
+env:
+  # Pinned mcp-publisher release. Bump deliberately and refresh the checksum with:
+  #   curl -sSLo mcp-publisher_linux_amd64.tar.gz \
+  #     https://github.com/modelcontextprotocol/registry/releases/download/vX.Y.Z/mcp-publisher_linux_amd64.tar.gz
+  #   sha256sum mcp-publisher_linux_amd64.tar.gz
+  MCP_PUBLISHER_VERSION: v1.8.1
+  MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
+      id-token: write  # required for the github-oidc login to the MCP registry
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -22,34 +34,56 @@ jobs:
         id: get-version
         shell: bash
         run: |
-          # 从触发 commit 获取 tag
+          set -euo pipefail
+          # Resolve the tag of the commit that triggered the Docker workflow.
           SHA="${{ github.event.workflow_run.head_sha }}"
-          TAG=$(git describe --tags --exact-match $SHA 2>/dev/null || echo "")
-          
+          TAG=$(git describe --tags --exact-match "$SHA" 2>/dev/null || echo "")
+
           if [[ -z "$TAG" ]]; then
             echo "Error: No tag found for commit $SHA"
             exit 1
           fi
-          
-          # 去除 'v' 前缀（如果存在）
+
+          # Strip a leading 'v' if present.
           VERSION="${TAG#v}"
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Install mcp-publisher
+        shell: bash
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          set -euo pipefail
+          ASSET="mcp-publisher_linux_amd64.tar.gz"
+          URL="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/${ASSET}"
+
+          echo "Downloading mcp-publisher ${MCP_PUBLISHER_VERSION} from ${URL}"
+          curl --fail --silent --show-error --location \
+            --proto '=https' --tlsv1.2 \
+            --output "${ASSET}" "${URL}"
+
+          echo "${MCP_PUBLISHER_SHA256}  ${ASSET}" | sha256sum --check --strict
+
+          tar --extract --gzip --file "${ASSET}" mcp-publisher
+          rm -f "${ASSET}"
+          test -x ./mcp-publisher
 
       - name: Set release version in server.json
         shell: bash
         run: |
+          set -euo pipefail
           VERSION="${{ steps.get-version.outputs.VERSION }}"
           jq --arg v "$VERSION" '.version = $v' server.json > server.json.tmp
           jq '.version as $v | .packages[0].identifier |= (split(":")[0] + ":" + $v)' server.json.tmp > server.json
           jq -e . server.json > /dev/null
 
       - name: Authenticate to MCP Registry
-        run: ./mcp-publisher login github-oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./mcp-publisher login github-oidc
 
       - name: Publish server metadata
-        run: ./mcp-publisher publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./mcp-publisher publish

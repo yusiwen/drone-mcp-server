@@ -2,8 +2,9 @@
 drone-mcp-server
 *.exe
 *.out
-dist/
-releases/
+# Anchored so that nested directories such as docs/releases/ stay tracked.
+/dist/
+/releases/
 
 # Dependencies
 vendor/

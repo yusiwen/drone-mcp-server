@@ -5,49 +5,107 @@ on:
     tags:
       - 'v*'  # Trigger on version tags like v1.0.0, v0.1.0, etc.
 
+# Least privilege by default. Jobs below elevate only what they genuinely need.
+permissions:
+  contents: read
+
 jobs:
-  release:
+  # Dependency vulnerability scan. Gates the release below, so a vulnerable
+  # dependency blocks publishing. Uses a pinned govulncheck version instead of
+  # golang/govulncheck-action, whose composite install step resolves
+  # golang.org/x/vuln/cmd/govulncheck@latest (i.e. unpinned) at run time.
+  govulncheck:
+    name: govulncheck
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
-      
+      contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Install govulncheck (pinned)
+        run: |
+          set -euo pipefail
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Scan dependencies for known vulnerabilities
+        run: |
+          set -euo pipefail
+          govulncheck -version
+          govulncheck ./...
+
+  release:
+    needs: govulncheck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to create the GitHub release and upload assets
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Run go vet
+        run: |
+          set -euo pipefail
+          go vet ./...
+
       - name: Run tests
         run: |
+          set -euo pipefail
           make test
+
+      - name: Run security smoke test
+        run: |
+          set -euo pipefail
+          make smoke
 
       - name: Build binaries with Makefile
         run: |
           # Get version from tag
           VERSION=${GITHUB_REF#refs/tags/}
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          
+
           # Build release archives using Makefile
           make release VERSION="$VERSION"
-          
+
           # List generated files
           ls -la releases/
-          
+
       - name: Generate changelog
         run: |
+          set -euo pipefail
           # Get current version tag
           CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          
+
+          # Curated release notes take precedence over the generated commit list,
+          # which matters for releases with breaking changes.
+          RELEASE_NOTES="docs/releases/${CURRENT_TAG}.md"
+          if [ -f "$RELEASE_NOTES" ]; then
+            echo "Using curated release notes from $RELEASE_NOTES"
+            cp "$RELEASE_NOTES" CHANGELOG.md
+            exit 0
+          fi
+
           # Get previous tag
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 "$CURRENT_TAG"^ 2>/dev/null || echo "")
-          
+
           if [ -n "$PREVIOUS_TAG" ]; then
             echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
             CHANGELOG=$(git log --pretty=format:"* %s (%h)" --no-merges "$PREVIOUS_TAG".."$CURRENT_TAG" 2>/dev/null || echo "No commits found")
@@ -55,14 +113,14 @@ jobs:
             echo "No previous tag found, generating full changelog"
             CHANGELOG=$(git log --pretty=format:"* %s (%h)" --no-merges 2>/dev/null || echo "No commits found")
           fi
-          
+
           # Create a simple changelog file for reference
           echo "# Changelog $CURRENT_TAG" > CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "$CHANGELOG" >> CHANGELOG.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: Release ${{ env.VERSION }}
           body_path: CHANGELOG.md
