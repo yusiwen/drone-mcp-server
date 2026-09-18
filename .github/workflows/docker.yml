@@ -91,10 +91,36 @@ jobs:
           # is still uploaded as a workflow artifact.
           upload-release-assets: false
 
+      # Anchore's scan-action is replaced by a pinned grype invocation: the
+      # scanner version and checksum are explicit, and the exact command can be
+      # reproduced locally when the gate fails.
       - name: Vulnerability scan
         if: github.event_name != 'pull_request'
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
+        run: |
+          set -euo pipefail
+          GRYPE_VERSION=v0.119.0
+          GRYPE_SHA256=3fa2dc4b924621ab65404cf08d0b8438d896d80ab949c9d5a4ca283c36004c9b
+          ASSET="grype_${GRYPE_VERSION#v}_linux_amd64.tar.gz"
+
+          curl --fail --silent --show-error --location \
+            --proto '=https' --tlsv1.2 \
+            --output "${ASSET}" \
+            "https://github.com/anchore/grype/releases/download/${GRYPE_VERSION}/${ASSET}"
+
+          echo "${GRYPE_SHA256}  ${ASSET}" | sha256sum --check --strict
+          tar --extract --gzip --file "${ASSET}" grype
+          rm -f "${ASSET}"
+          ./grype --version
+
+          # Fail only on critical findings. The JSON report is uploaded by the
+          # next step, which also runs when this one fails.
+          ./grype "registry:${REGISTRY}/${IMAGE_NAME}:latest" \
+            -o table -o json=grype-report.json --fail-on critical
+
+      - name: Upload the vulnerability report
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          fail-build: true
-          severity-cutoff: critical
+          name: grype-report
+          path: grype-report.json
+          if-no-files-found: ignore
