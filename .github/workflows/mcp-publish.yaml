@@ -74,7 +74,25 @@ jobs:
           VERSION="${{ steps.get-version.outputs.VERSION }}"
           jq --arg v "$VERSION" '.version = $v' server.json > server.json.tmp
           jq '.version as $v | .packages[0].identifier |= (split(":")[0] + ":" + $v)' server.json.tmp > server.json
+          rm -f server.json.tmp
           jq -e . server.json > /dev/null
+
+          # Fail fast on the registry's field constraints. The registry answers
+          # an over-long description with an opaque "422 Unprocessable Entity",
+          # which is only visible in the workflow log.
+          description_length="$(jq -r '.description | length' server.json)"
+          if [ "$description_length" -gt 100 ]; then
+            echo "server.json description must be 100 characters or fewer, got ${description_length}"
+            exit 1
+          fi
+          jq -e '(.name | length) > 0 and (.version | length) > 0' server.json > /dev/null
+
+      - name: Validate server.json against the registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Catches registry-side validation errors before the publish attempt.
+          ./mcp-publisher validate server.json
 
       - name: Authenticate to MCP Registry
         shell: bash
