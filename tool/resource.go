@@ -31,9 +31,16 @@ func (h *ResourceHandler) HandleBuildResource(ctx context.Context, req *mcp.Read
 	}
 
 	owner, repo, buildStr := parts[0], parts[1], parts[2]
+	if err := firstErr(ValidateSegment("owner", owner), ValidateSegment("repo", repo)); err != nil {
+		return nil, fmt.Errorf("invalid resource URI: %w", err)
+	}
+
 	buildNum, err := strconv.Atoi(buildStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid build number: %w", err)
+	}
+	if buildNum < 1 || buildNum > maxNumber {
+		return nil, fmt.Errorf("invalid build number: must be between 1 and %d", maxNumber)
 	}
 
 	build, err := h.client.Build(owner, repo, buildNum)

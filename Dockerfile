@@ -33,7 +33,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o drone-mcp-server .
 
 # Final stage
-FROM alpine:latest
+FROM alpine:3.22
 
 LABEL io.modelcontextprotocol.server.name="io.github.yusiwen/drone-mcp-server"
 
@@ -61,6 +61,8 @@ EXPOSE 8080
 # Set environment variables
 ENV DRONE_SERVER=""
 ENV DRONE_TOKEN=""
+# HTTP mode refuses to start unless this is set (or MCP_AUTH_TOKEN_FILE points
+# at a mounted secret).
 ENV MCP_AUTH_TOKEN=""
 
 # Entrypoint
@@ -69,5 +71,7 @@ ENTRYPOINT ["./drone-mcp-server"]
 # Default command (stdio mode)
 CMD []
 
-# To run in SSE mode with custom parameters:
-# docker run -e DRONE_SERVER=... -e DRONE_TOKEN=... -p 8080:8080 drone-mcp-server --sse --host 0.0.0.0
+# To run in Streamable HTTP mode with custom parameters:
+# docker run -e DRONE_SERVER=... -e DRONE_TOKEN=... -e MCP_AUTH_TOKEN=... \
+#            -p 127.0.0.1:8080:8080 drone-mcp-server --http --host 0.0.0.0
+# Add --enable-write-tools only when the workflow needs to mutate Drone.

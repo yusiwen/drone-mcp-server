@@ -38,11 +38,12 @@ run: build
 	@echo "Running in stdio mode..."
 	./$(BINARY_NAME)
 
-# Run in SSE mode for testing
-.PHONY: run-sse
-run-sse: build
-	@echo "Running in SSE mode on http://localhost:8080..."
-	./$(BINARY_NAME) --sse --host localhost --port 8080
+# Run in Streamable HTTP mode for testing (requires MCP_AUTH_TOKEN)
+.PHONY: run-http
+run-http: build
+	@echo "Running in Streamable HTTP mode on http://localhost:8080..."
+	@test -n "$(MCP_AUTH_TOKEN)" || (echo "MCP_AUTH_TOKEN must be set for HTTP mode" && exit 1)
+	./$(BINARY_NAME) --http --host localhost --port 8080
 
 # Build for all platforms
 .PHONY: build-all
@@ -87,6 +88,12 @@ test:
 	@echo "Running tests..."
 	go test ./... -v
 
+# Run tests with the race detector
+.PHONY: test-race
+test-race:
+	@echo "Running tests with the race detector..."
+	go test ./... -race
+
 # Run tests with coverage
 .PHONY: test-coverage
 test-coverage:
@@ -94,6 +101,12 @@ test-coverage:
 	go test ./... -coverprofile=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+# Run the end-to-end security smoke test (offline, no Drone instance required)
+.PHONY: smoke
+smoke: build
+	@echo "Running the security smoke test..."
+	BIN=./$(BINARY_NAME) ./scripts/security-smoke-test.sh
 
 # Clean build artifacts
 .PHONY: clean
@@ -118,10 +131,12 @@ help:
 	@echo "  build        - Build for current platform (default)"
 	@echo "  install      - Build and install to GOPATH/bin"
 	@echo "  run          - Build and run in stdio mode"
-	@echo "  run-sse      - Build and run in SSE mode on localhost:8080"
+	@echo "  run-http     - Build and run in Streamable HTTP mode on localhost:8080"
 	@echo "  build-all    - Build for all platforms (linux, darwin, windows)"
 	@echo "  release      - Build release archives for all platforms"
 	@echo "  test         - Run tests"
+	@echo "  test-race    - Run tests with the race detector"
+	@echo "  smoke        - Run the end-to-end security smoke test"
 	@echo "  test-coverage - Run tests with coverage report"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  version      - Show version information"
@@ -140,11 +155,15 @@ docker-build:
 .PHONY: docker-run
 docker-run: docker-build
 	@echo "Running Docker container..."
+	@test -n "$(MCP_AUTH_TOKEN)" || (echo "MCP_AUTH_TOKEN must be set for HTTP mode" && exit 1)
+	@# Secrets are forwarded from the host environment by name so that they do
+	@# not appear in the container command line or in the shell history.
 	docker run --rm -it \
-		-e DRONE_SERVER=$(DRONE_SERVER) \
-		-e DRONE_TOKEN=$(DRONE_TOKEN) \
-		-p 8080:8080 \
-		drone-mcp-server:$(VERSION) --sse --host 0.0.0.0
+		-e DRONE_SERVER \
+		-e DRONE_TOKEN \
+		-e MCP_AUTH_TOKEN \
+		-p 127.0.0.1:8080:8080 \
+		drone-mcp-server:$(VERSION) --http --host 0.0.0.0
 
 .PHONY: docker-clean
 docker-clean:
